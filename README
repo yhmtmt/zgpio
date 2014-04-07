@@ -1,0 +1,12 @@
+This driver is the axi-gpio driver for Xilinx Zynq device. This driver does not supply linux gpio interface. The driver has only ioctl interface.
+
+In current version, you can set and get the value of the IO channel, enable and disable the interrupt, and receive the SIGIO signal if the interrupt is enabled.The sample code implementing these operations is available as zgpio_test.c. 
+
+For the installation, scripts are attached.
+
+szgpio.sh (starting script)
+kzgpio.sh (killing script)
+
+Thank you.
+Yohei Matsuoto
+Tokyo University of Marine Science and Technology.

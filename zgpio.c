@@ -139,21 +139,21 @@ long zgpio_ioctl(struct file * filp, unsigned int cmd, unsigned long arg)
     retval = __get_user(val, (unsigned int __user*) arg);
     val = (val ? irq_mask : 0x00000000);
     iowrite32(val, lp->base_addr + irq_addr);
-    printk(KERN_INFO "GINT %x\n", val);
+    //    printk(KERN_INFO "GINT %x\n", val);
     break;
   case ZGPIO_IOSETINT:
     retval = __get_user(val, (unsigned int __user*) arg);
     val = (val ? irq_en_mask : 0x00000000);
     val |= ioread32(lp->base_addr + irq_en_addr) & ~irq_en_mask;
     iowrite32(val, lp->base_addr + irq_en_addr);
-    printk(KERN_INFO "EINT1 %x\n", val);
+    //    printk(KERN_INFO "EINT1 %x\n", val);
     break;
   case ZGPIO_IOSETINT2:
     retval = __get_user(val, (unsigned int __user*) arg);
     val = (val ? irq_en_mask2 : 0x00000000);
     val |= ioread32(lp->base_addr + irq_en_addr) & ~irq_en_mask2;
     iowrite32(val, lp->base_addr + irq_en_addr);
-    printk(KERN_INFO "EINT2 %x\n", val);
+    //    printk(KERN_INFO "EINT2 %x\n", val);
     break;
   }
 
@@ -173,7 +173,7 @@ int zgpio_open(struct inode * inode, struct file * filp)
 int zgpio_fasync(int fd, struct file * filp, int mode)
 {
   struct zgpio_local * lp = (struct zgpio_local*) filp->private_data;
-  printk(KERN_INFO "calling fasync helper.\n");
+  //  printk(KERN_INFO "calling fasync helper.\n");
   return fasync_helper(fd, filp, mode, &lp->async_queue);
 }
 
@@ -194,13 +194,13 @@ static irqreturn_t zgpio_irq(int irq, void *lp)
 {
   unsigned int st;
   st = ioread32(((struct zgpio_local*)lp)->base_addr + irq_st_addr);
-  printk(KERN_INFO "Etnerint interrupt handler.\n");
+  //  printk(KERN_INFO "Etnerint interrupt handler.\n");
   //  printk(KERN_INFO "zgpio interrupt reg1=%08x reg2=%08x irq_st=%08x\n",
   //	 ioread32(((struct zgpio_local *)lp)->base_addr), 
   //	 ioread32(((struct zgpio_local*)lp)->base_addr + io2_addr),
   //	 st);
   if(((struct zgpio_local *) lp)->async_queue){
-    printk(KERN_INFO "sending signal SIGIO\n");
+    //    printk(KERN_INFO "sending signal SIGIO\n");
     kill_fasync(&((struct zgpio_local*) lp)->async_queue, SIGIO, POLL_IN);
   }
   
@@ -334,7 +334,7 @@ static int __devinit zgpio_probe(struct platform_device *pdev)
   
   //global irq enabling
   iowrite32(irq_mask, lp->base_addr + irq_addr);
-  iowrite32(irq_en_mask, lp->base_addr + irq_en_addr);
+  iowrite32(irq_en_mask | irq_en_mask2, lp->base_addr + irq_en_addr);
  
   /////////////////////////  initializing char device /////////////////////////////////
   if(zgpio_cdev_init(dev, lp) < 0)
