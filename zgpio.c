@@ -35,15 +35,13 @@ MODULE_DESCRIPTION
 #define DRIVER_NAME "zgpio"
 
 ////////////////////////////////////////////////////////// Parameters
-unsigned int tbuf_mask = 0xffffffff;
 int tbuf_addr = 0x04;
 int io2_addr = 0x08;
 int tbuf2_addr = 0x0c;
-unsigned int tbuf2_mask = 0x00000000;
-unsigned int irq_mask = 0x80000000;
-int irq_addr = 0x11c;
-unsigned int irq_en_mask  = 0x00000001;
-unsigned int irq_en_mask2 = 0x00000002;
+unsigned int irq_gen_init = 0x80000000;
+int irq_gen_addr = 0x11c;
+unsigned int irq_en_init  = 0x00000000;
+unsigned int irq_en_init2 = 0x00000000;
 int irq_en_addr = 0x128;
 unsigned int irq_st_mask  = 0x00000001;
 unsigned int irq_st_mask2 = 0x00000002;
@@ -53,15 +51,13 @@ int zgpio_major = 0; // major number (dynamically allocated in probe)
 int zgpio_minor = 0; // minor number (zero fixed)
 int zgpio_nr_devs = 1; // only one device node is supported.
 
-module_param( tbuf_mask , int , S_IRUGO );
 module_param( tbuf_addr , int , S_IRUGO );
 module_param( io2_addr , int , S_IRUGO );
-module_param( tbuf2_mask , int , S_IRUGO );
 module_param( tbuf2_addr , int , S_IRUGO );
-module_param( irq_mask, int , S_IRUGO );
-module_param( irq_addr, int , S_IRUGO );
-module_param( irq_en_mask, int , S_IRUGO );
-module_param( irq_en_mask2, int , S_IRUGO );
+module_param( irq_gen_init, int , S_IRUGO );
+module_param( irq_gen_addr, int , S_IRUGO );
+module_param( irq_en_init, int , S_IRUGO );
+module_param( irq_en_init2, int , S_IRUGO );
 module_param( irq_en_addr, int , S_IRUGO );
 module_param( irq_st_mask, int , S_IRUGO );
 module_param( irq_st_mask2, int , S_IRUGO );
@@ -78,6 +74,14 @@ struct zgpio_local {
   unsigned long mem_end;
   void __iomem *base_addr;
   struct fasync_struct * async_queue;
+  int all_inputs;
+  int all_inputs2;
+  int dout_default;
+  int dout_default2;
+  int gpio_width;
+  int gpio_width2;
+  u32 tri_default;
+  u32 tri_default2;
 };
 
 ////////////////////////////////////////////////////////// file operation override
@@ -117,7 +121,10 @@ long zgpio_ioctl(struct file * filp, unsigned int cmd, unsigned long arg)
 
   switch(cmd){
   case ZGPIO_IOCRESET:
-    iowrite32(tbuf_mask, lp->base_addr);
+    iowrite32(lp->tri_default, lp->base_addr + tbuf_addr);
+    iowrite32(lp->tri_default2, lp->base_addr + tbuf2_addr);
+    iowrite32(irq_gen_init, lp->base_addr + irq_gen_addr);
+    iowrite32(irq_en_init | irq_en_init2, lp->base_addr + irq_en_addr);
     break;
   case ZGPIO_IOCSET:
     retval = __get_user(val, (unsigned int __user *) arg);
@@ -135,25 +142,30 @@ long zgpio_ioctl(struct file * filp, unsigned int cmd, unsigned long arg)
     val = ioread32(lp->base_addr + io2_addr);
     retval = __put_user(val, (unsigned int __user*) arg);
     break;
-  case ZGPIO_IOSETGINT:
+  case ZGPIO_IOCSETGINT:
     retval = __get_user(val, (unsigned int __user*) arg);
-    val = (val ? irq_mask : 0x00000000);
-    iowrite32(val, lp->base_addr + irq_addr);
-    //    printk(KERN_INFO "GINT %x\n", val);
+    val = (val ? 0x80000000 : 0x00000000);
+    iowrite32(val, lp->base_addr + irq_gen_addr);
     break;
-  case ZGPIO_IOSETINT:
+  case ZGPIO_IOCSETINT:
     retval = __get_user(val, (unsigned int __user*) arg);
-    val = (val ? irq_en_mask : 0x00000000);
-    val |= ioread32(lp->base_addr + irq_en_addr) & ~irq_en_mask;
+    val = (val ? 0x00000001 : 0x00000000);
+    val |= ioread32(lp->base_addr + irq_en_addr) & ~irq_en_init;
     iowrite32(val, lp->base_addr + irq_en_addr);
-    //    printk(KERN_INFO "EINT1 %x\n", val);
     break;
-  case ZGPIO_IOSETINT2:
+  case ZGPIO_IOCSETINT2:
     retval = __get_user(val, (unsigned int __user*) arg);
-    val = (val ? irq_en_mask2 : 0x00000000);
-    val |= ioread32(lp->base_addr + irq_en_addr) & ~irq_en_mask2;
+    val = (val ? 0x00000002 : 0x00000000);
+    val |= ioread32(lp->base_addr + irq_en_addr) & ~irq_en_init2;
     iowrite32(val, lp->base_addr + irq_en_addr);
-    //    printk(KERN_INFO "EINT2 %x\n", val);
+    break;
+  case ZGPIO_IOCSETTBUF:
+    retval = __get_user(val, (unsigned int __user*) arg);
+    iowrite32(val, lp->base_addr + tbuf_addr);
+    break;
+  case ZGPIO_IOCSETTBUF2:
+    retval = __get_user(val, (unsigned int __user*) arg);
+    iowrite32(val, lp->base_addr + tbuf2_addr);
     break;
   }
 
@@ -173,7 +185,6 @@ int zgpio_open(struct inode * inode, struct file * filp)
 int zgpio_fasync(int fd, struct file * filp, int mode)
 {
   struct zgpio_local * lp = (struct zgpio_local*) filp->private_data;
-  //  printk(KERN_INFO "calling fasync helper.\n");
   return fasync_helper(fd, filp, mode, &lp->async_queue);
 }
 
@@ -194,20 +205,11 @@ static irqreturn_t zgpio_irq(int irq, void *lp)
 {
   unsigned int st;
   st = ioread32(((struct zgpio_local*)lp)->base_addr + irq_st_addr);
-  //  printk(KERN_INFO "Etnerint interrupt handler.\n");
-  //  printk(KERN_INFO "zgpio interrupt reg1=%08x reg2=%08x irq_st=%08x\n",
-  //	 ioread32(((struct zgpio_local *)lp)->base_addr), 
-  //	 ioread32(((struct zgpio_local*)lp)->base_addr + io2_addr),
-  //	 st);
   if(((struct zgpio_local *) lp)->async_queue){
-    //    printk(KERN_INFO "sending signal SIGIO\n");
     kill_fasync(&((struct zgpio_local*) lp)->async_queue, SIGIO, POLL_IN);
   }
   
   iowrite32(st, ((struct zgpio_local *)lp)->base_addr + irq_st_addr);
-  //st = ioread32(((struct zgpio_local*)lp)->base_addr + irq_st_addr);
-  //  printk(KERN_INFO "renewed irq_st=%08x\n", st);
-
   return IRQ_HANDLED;
 }
 
@@ -257,8 +259,18 @@ static int __devinit zgpio_probe(struct platform_device *pdev)
 {
   struct resource *r_irq; /* Interrupt resources */
   struct resource *r_mem; /* IO mem resources */
-  struct device *dev = &pdev->dev;
+  struct device_node * node;
+  struct device *dev = &pdev->dev;  
   struct zgpio_local *lp = NULL;
+  int all_inputs;
+  int all_inputs2;
+  int dout_default;
+  int dout_default2;
+  int gpio_width;
+  int gpio_width2;
+  u32 tri_default;
+  u32 tri_default2;
+  const __be32 * value;
   int rc = 0;
 
   /////////////////////////// Probing Device Tree ///////////////////////////////////////
@@ -270,24 +282,98 @@ static int __devinit zgpio_probe(struct platform_device *pdev)
     dev_err(dev, "invalid address\n");
     return -ENODEV;
   }  
+  dev_info(dev, "zgpio's gpio at 0x%08x mapped to 0x%08x\n",
+	   (unsigned int __force)lp->mem_start,
+	   (unsigned int __force)lp->base_addr);
 
   /* Get IRQ for the device */
   r_irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
   if (!r_irq) {
     dev_info(dev, "no IRQ found\n");
-    dev_info(dev, "zgpio's gpio at 0x%08x mapped to 0x%08x\n",
-	     (unsigned int __force)lp->mem_start,
-	     (unsigned int __force)lp->base_addr);
     return 0;
   } 
  
+  node = dev->of_node;
+  value = of_get_property(node, 
+			  "xlnx,all-inputs",
+			  NULL);
+  if(value)
+    all_inputs = be32_to_cpup(value);
+  else 
+    all_inputs = 0;
+
+  value = of_get_property(node, 
+			  "xlnx,all-inputs-2",
+			  NULL);
+  if(value)
+    all_inputs2 = be32_to_cpup(value);
+  else 
+    all_inputs2 = 0;
+
+  value = of_get_property(node, 
+			  "xlnx,dout-default",
+			  NULL);
+  if(value)
+    dout_default = be32_to_cpup(value);
+  else 
+    dout_default = 0;
+
+  value = of_get_property(node, 
+			  "xlnx,dout-default-2",
+			  NULL);
+  if(value)
+    dout_default2 = be32_to_cpup(value);
+  else 
+    dout_default2 = 0;
+
+  value = of_get_property(node, 
+			  "xlnx,gpio-width",
+			  NULL);
+  if(value)
+    gpio_width = be32_to_cpup(value);
+  else 
+    gpio_width = 32;
+
+  value = of_get_property(node, 
+			  "xlnx,gpio-width-2",
+			  NULL);
+  if(value)
+    gpio_width2 = be32_to_cpup(value);
+  else 
+    gpio_width2 = 32;
+
+  value = of_get_property(node, 
+			  "xlnx,tri_default",
+			  NULL);
+  if(value)
+    tri_default = be32_to_cpup(value);
+  else 
+    tri_default = 0;
+ 
+  value = of_get_property(node, 
+			  "xlnx,tri_default2",
+			  NULL);
+  if(value)
+    tri_default2 = be32_to_cpup(value);
+  else 
+    tri_default2 = 0;
+  
   ////////////////////////// allocating local data structure /////////////////////////////
   lp = (struct zgpio_local *) kzalloc(sizeof(struct zgpio_local), GFP_KERNEL);
   if (!lp) {
     dev_err(dev, "Cound not allocate zgpio device\n");
     return -ENOMEM;
   }
-  
+
+  lp->all_inputs = all_inputs;
+  lp->all_inputs2 = all_inputs2;
+  lp->dout_default = dout_default;
+  lp->dout_default2 = dout_default2;
+  lp->gpio_width = gpio_width;
+  lp->gpio_width2 = gpio_width;
+  lp->tri_default = tri_default;
+  lp->tri_default = tri_default2;
+
   dev_set_drvdata(dev, lp);
 
   ////////////////////////// mapping gpio control memory ////////////////////////////////  
@@ -312,15 +398,17 @@ static int __devinit zgpio_probe(struct platform_device *pdev)
   }
   
   ////////////////////////// setting up gpio irq ///////////////////////////////////////
-  lp->irq = r_irq->start;
-  
-  rc = request_irq(lp->irq, &zgpio_irq, 0, DRIVER_NAME, lp);
-  if (rc) {
-    dev_err(dev, "testmodule: Could not allocate interrupt %d.\n",
-	    lp->irq);
-    goto out_free_iomap;
+  if(r_irq){
+    lp->irq = r_irq->start;
+    
+    rc = request_irq(lp->irq, &zgpio_irq, 0, DRIVER_NAME, lp);
+    if (rc) {
+      dev_err(dev, "testmodule: Could not allocate interrupt %d.\n",
+	      lp->irq);
+      goto out_free_iomap;
+    }
   }
- 
+
   ///////////////////////// initializing gpio control register ////////////////////////
   dev_info(dev,"zgpio at 0x%08x mapped to 0x%08x, irq=%d\n",
 	   (unsigned int __force)lp->mem_start,
@@ -329,12 +417,12 @@ static int __devinit zgpio_probe(struct platform_device *pdev)
 
   // configuring axi gpio
   // determining io direction by applying tbuf_mask. 
-  iowrite32(tbuf_mask, lp->base_addr + tbuf_addr);
-  iowrite32(tbuf2_mask, lp->base_addr + tbuf2_addr);
+  iowrite32(tri_default, lp->base_addr + tbuf_addr);
+  iowrite32(tri_default2, lp->base_addr + tbuf2_addr);
   
   //global irq enabling
-  iowrite32(irq_mask, lp->base_addr + irq_addr);
-  iowrite32(irq_en_mask | irq_en_mask2, lp->base_addr + irq_en_addr);
+  iowrite32(irq_gen_init, lp->base_addr + irq_gen_addr);
+  iowrite32(irq_en_init | irq_en_init2, lp->base_addr + irq_en_addr);
  
   /////////////////////////  initializing char device /////////////////////////////////
   if(zgpio_cdev_init(dev, lp) < 0)

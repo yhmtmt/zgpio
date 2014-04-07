@@ -53,15 +53,15 @@ int main(int argc, char ** argv){
   }else if(strcmp(argv[1], "gint") == 0){
     val = (unsigned int) atoi(argv[2]);
     printf("gint<-%d\n", val ? 1 : 0);
-    ioctl(fd, ZGPIO_IOSETGINT, &val);
+    ioctl(fd, ZGPIO_IOCSETGINT, &val);
   }else if(strcmp(argv[1], "int") == 0){
     val = (unsigned int) atoi(argv[2]);
     printf("int<-%d\n", val ? 1 : 0);
-    ioctl(fd, ZGPIO_IOSETINT, &val);
+    ioctl(fd, ZGPIO_IOCSETINT, &val);
   }else if(strcmp(argv[1], "int2") == 0){
     val = (unsigned int) atoi(argv[2]);
     printf("int2<-%d\n", val ? 1 : 0);
-    ioctl(fd, ZGPIO_IOSETINT2, &val);
+    ioctl(fd, ZGPIO_IOCSETINT2, &val);
   }else if(strcmp(argv[1], "sig") == 0){
     unsigned int pid = getpid();
     printf("Process id = %d\n", pid);
