@@ -282,10 +282,6 @@ static int __devinit zgpio_probe(struct platform_device *pdev)
     dev_err(dev, "invalid address\n");
     return -ENODEV;
   }  
-  dev_info(dev, "zgpio's gpio at 0x%08x mapped to 0x%08x\n",
-	   (unsigned int __force)lp->mem_start,
-	   (unsigned int __force)lp->base_addr);
-
   /* Get IRQ for the device */
   r_irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
   if (!r_irq) {
@@ -365,6 +361,13 @@ static int __devinit zgpio_probe(struct platform_device *pdev)
     return -ENOMEM;
   }
 
+  lp->mem_start = r_mem->start;
+  lp->mem_end = r_mem->end;
+
+  dev_info(dev, "zgpio's gpio at 0x%08x mapped to 0x%08x\n",
+	   (unsigned int __force)lp->mem_start,
+	   (unsigned int __force)lp->base_addr);
+
   lp->all_inputs = all_inputs;
   lp->all_inputs2 = all_inputs2;
   lp->dout_default = dout_default;
@@ -377,8 +380,6 @@ static int __devinit zgpio_probe(struct platform_device *pdev)
   dev_set_drvdata(dev, lp);
 
   ////////////////////////// mapping gpio control memory ////////////////////////////////  
-  lp->mem_start = r_mem->start;
-  lp->mem_end = r_mem->end;
   
   if (!request_mem_region(lp->mem_start,
 			  lp->mem_end - lp->mem_start + 1,
