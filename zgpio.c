@@ -364,10 +364,6 @@ static int __devinit zgpio_probe(struct platform_device *pdev)
   lp->mem_start = r_mem->start;
   lp->mem_end = r_mem->end;
 
-  dev_info(dev, "zgpio's gpio at 0x%08x mapped to 0x%08x\n",
-	   (unsigned int __force)lp->mem_start,
-	   (unsigned int __force)lp->base_addr);
-
   lp->all_inputs = all_inputs;
   lp->all_inputs2 = all_inputs2;
   lp->dout_default = dout_default;
@@ -393,7 +389,7 @@ static int __devinit zgpio_probe(struct platform_device *pdev)
   lp->base_addr = ioremap(lp->mem_start, lp->mem_end - lp->mem_start + 1);
 
   if (!lp->base_addr) {
-    dev_err(dev, "zgpio: Could not allocate iomem\n");
+    dev_err(dev, "Could not allocate iomem\n");
     rc = -EIO;
     goto out_free_mem_region;
   }
@@ -404,17 +400,13 @@ static int __devinit zgpio_probe(struct platform_device *pdev)
     
     rc = request_irq(lp->irq, &zgpio_irq, 0, DRIVER_NAME, lp);
     if (rc) {
-      dev_err(dev, "testmodule: Could not allocate interrupt %d.\n",
+      dev_err(dev, "Could not allocate interrupt %d.\n",
 	      lp->irq);
       goto out_free_iomap;
     }
   }
 
   ///////////////////////// initializing gpio control register ////////////////////////
-  dev_info(dev,"zgpio at 0x%08x mapped to 0x%08x, irq=%d\n",
-	   (unsigned int __force)lp->mem_start,
-	   (unsigned int __force)lp->base_addr,
-	   lp->irq);
 
   // configuring axi gpio
   // determining io direction by applying tbuf_mask. 
