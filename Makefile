@@ -1,0 +1,18 @@
+KERNEL_SRC = ../linux-xlnx
+BUILD_DIR := $(shell pwd)
+
+MODULES = zgpio.o
+
+obj-m := $(MODULES)
+
+CROSS_COMPILE = arm-xilinx-linux-gnueabi-
+ARCH = arm
+MAKEARCH = $(MAKE) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE)
+
+all:
+	$(MAKEARCH) -C $(KERNEL_SRC) SUBDIRS=$(BUILD_DIR) modules
+
+clean:
+	rm -f *.o
+	rm -f *.ko
+	rm -f *.mod.c

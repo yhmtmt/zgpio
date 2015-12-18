@@ -25,6 +25,12 @@
 
 #include "zgpio.h"
 
+#ifndef __devinit 
+#define __devinit
+#define __devexit
+#define __devinitdata
+#endif
+
 /* Standard module information*/
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR
@@ -331,7 +337,7 @@ static int __devinit zgpio_probe(struct platform_device *pdev)
     gpio_width = 32;
 
   value = of_get_property(node, 
-			  "xlnx,gpio-width-2",
+			  "xlnx,gpio2-width",
 			  NULL);
   if(value)
     gpio_width2 = be32_to_cpup(value);
@@ -425,8 +431,8 @@ static int __devinit zgpio_probe(struct platform_device *pdev)
 
   return 0;
 
- out_free_cdev:
-  cdev_del(&lp->cdev);
+  /* out_free_cdev:
+     cdev_del(&lp->cdev);*/
  out_free_irq:
   free_irq(lp->irq, lp);
  out_free_iomap:
@@ -478,7 +484,7 @@ static struct platform_driver zgpio_driver = {
     .of_match_table = zgpio_of_match,
   },
   .probe = zgpio_probe,
-  .remove = __devexit_p(zgpio_remove),
+  .remove = zgpio_remove,
 };
 
 static int __init zgpio_init(void)
