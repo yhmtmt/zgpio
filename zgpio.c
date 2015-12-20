@@ -288,11 +288,11 @@ static int __devinit zgpio_probe(struct platform_device *pdev)
     dev_err(dev, "invalid address\n");
     return -ENODEV;
   }  
+
   /* Get IRQ for the device */
   r_irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
   if (!r_irq) {
     dev_info(dev, "no IRQ found\n");
-    return 0;
   } 
  
   node = dev->of_node;
