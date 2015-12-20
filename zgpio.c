@@ -257,7 +257,8 @@ static void zgpio_cdev_free(struct zgpio_local * lp){
   dev_t devno = MKDEV(zgpio_major, zgpio_minor);
   cdev_del(&lp->cdev);
   unregister_chrdev_region(devno, zgpio_nr_devs);
-  free_irq(lp->irq, lp);
+  if(lp->irq)
+    free_irq(lp->irq, lp);
   release_mem_region(lp->mem_start, lp->mem_end - lp->mem_start + 1);
 }
 
@@ -449,15 +450,6 @@ static int __devexit zgpio_remove(struct platform_device *pdev)
 {
   struct device *dev = &pdev->dev;
   struct zgpio_local *lp = dev_get_drvdata(dev);
-
-  /*
-  dev_t devno = MKDEV(zgpio_major, zgpio_minor);
-  cdev_del(&lp->cdev);
-  unregister_chrdev_region(devno, zgpio_nr_devs);
-
-  free_irq(lp->irq, lp);
-  release_mem_region(lp->mem_start, lp->mem_end - lp->mem_start + 1);
-  */
 
   zgpio_cdev_free(lp);
   kfree(lp);
