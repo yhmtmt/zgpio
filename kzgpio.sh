@@ -3,7 +3,7 @@
 module="zgpio"
 device="zgpio"
 
-/sbin/rmmod $module.ko $* || exit 1
+/sbin/rmmod $module $* || exit 1
 
 rm -f /dev/${device}0
  
