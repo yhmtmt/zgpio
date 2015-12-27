@@ -169,9 +169,17 @@ long zgpio_ioctl(struct file * filp, unsigned int cmd, unsigned long arg)
     retval = __get_user(val, (unsigned int __user*) arg);
     iowrite32(val, lp->base_addr + tbuf_addr);
     break;
+  case ZGPIO_IOCGETTBUF:
+    val = ioread32(lp->base_addr + tbuf_addr);
+    retval = __put_user(val, (unsigned int __user*) arg);
+    break;
   case ZGPIO_IOCSETTBUF2:
     retval = __get_user(val, (unsigned int __user*) arg);
     iowrite32(val, lp->base_addr + tbuf2_addr);
+    break;
+  case ZGPIO_IOCGETTBUF2:
+    val = ioread32(lp->base_addr + tbuf2_addr);
+    retval = __put_user(val, (unsigned int __user*) arg);
     break;
   }
 
@@ -481,7 +489,7 @@ static struct platform_driver zgpio_driver = {
 
 static int __init zgpio_init(void)
 {
-  printk(KERN_INFO "start zgpio. ver.0.00");
+  printk(KERN_INFO "start zgpio. ver.0.02");
  
   return platform_driver_register(&zgpio_driver);
 }
