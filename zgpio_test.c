@@ -46,7 +46,7 @@ int main(int argc, char ** argv){
   }else if(strcmp(argv[1], "set2") == 0){
     sscanf(argv[2], "%x", &val);
     ioctl(fd, ZGPIO_IOCSET2, &val);
-    printf("zgpio<=%08x\n", &val);
+    printf("zgpio<=%08x\n", val);
   }else if(strcmp(argv[1], "get2") == 0){
     ioctl(fd, ZGPIO_IOCGET2, &val);
     printf("zgpio2=>%08x\n", val);
