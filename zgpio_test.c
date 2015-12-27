@@ -43,6 +43,13 @@ int main(int argc, char ** argv){
   }else if(strcmp(argv[1], "get") == 0){
     ioctl(fd, ZGPIO_IOCGET, &val);
     printf("zgpio=>%08x\n", val);
+  }else if(strcmp(argv[1], "sett") == 0){
+    sscanf(argv[2], "%x", &val);
+    ioctl(fd, ZGPIO_IOCSETTBUF, &val);
+    printf("zgpio.tbuf<=%08x\n", val);    
+  }else if(strcmp(argv[1], "gett") == 0){
+    ioctl(fd, ZGPIO_IOCGETTBUF, &val);
+    printf("zgpio.tbuf=>%08x\n", val);
   }else if(strcmp(argv[1], "set2") == 0){
     sscanf(argv[2], "%x", &val);
     ioctl(fd, ZGPIO_IOCSET2, &val);
@@ -50,6 +57,13 @@ int main(int argc, char ** argv){
   }else if(strcmp(argv[1], "get2") == 0){
     ioctl(fd, ZGPIO_IOCGET2, &val);
     printf("zgpio2=>%08x\n", val);
+  }else if(strcmp(argv[1], "sett2") == 0){
+    sscanf(argv[2], "%x", &val);
+    ioctl(fd, ZGPIO_IOCSETTBUF2, &val);
+    printf("zgpio.tbuf2<=%08x\n", val);
+  }else if(strcmp(argv[1], "gett2") == 0){
+    ioctl(fd, ZGPIO_IOCGETTBUF2, &val);
+    printf("zgpio.tbuf2=>%08x\n", val);
   }else if(strcmp(argv[1], "gint") == 0){
     val = (unsigned int) atoi(argv[2]);
     printf("gint<-%d\n", val ? 1 : 0);
