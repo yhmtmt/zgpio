@@ -5,7 +5,7 @@ device="zgpio"
 
 /sbin/rmmod $module $* || exit 1
 
-rm -f /dev/${device}0
+rm -f /dev/${device}*
  
 
  
