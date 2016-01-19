@@ -53,8 +53,8 @@ unsigned int irq_st_mask  = 0x00000001;
 unsigned int irq_st_mask2 = 0x00000002;
 int irq_st_addr = 0x120;
 
-int zgpio_major = 0; // major number (dynamically allocated in probe)
-int zgpio_minor = 0; // minor number (zero fixed)
+//int zgpio_major = 0; // major number (dynamically allocated in probe)
+//int zgpio_minor = 0; // minor number (zero fixed)
 int zgpio_nr_devs = 1; // only one device node is supported.
 
 module_param( tbuf_addr , int , S_IRUGO );
@@ -88,6 +88,9 @@ struct zgpio_local {
   int gpio_width2;
   u32 tri_default;
   u32 tri_default2;
+
+  int zgpio_major;
+  int zgpio_minor;
 };
 
 ////////////////////////////////////////////////////////// file operation override
@@ -169,17 +172,9 @@ long zgpio_ioctl(struct file * filp, unsigned int cmd, unsigned long arg)
     retval = __get_user(val, (unsigned int __user*) arg);
     iowrite32(val, lp->base_addr + tbuf_addr);
     break;
-  case ZGPIO_IOCGETTBUF:
-    val = ioread32(lp->base_addr + tbuf_addr);
-    retval = __put_user(val, (unsigned int __user*) arg);
-    break;
   case ZGPIO_IOCSETTBUF2:
     retval = __get_user(val, (unsigned int __user*) arg);
     iowrite32(val, lp->base_addr + tbuf2_addr);
-    break;
-  case ZGPIO_IOCGETTBUF2:
-    val = ioread32(lp->base_addr + tbuf2_addr);
-    retval = __put_user(val, (unsigned int __user*) arg);
     break;
   }
 
@@ -230,19 +225,21 @@ static irqreturn_t zgpio_irq(int irq, void *lp)
 static int zgpio_cdev_init(struct device * dev, struct zgpio_local * lp){
   dev_t devno;
   int rc = 0;
-  
-  if(zgpio_major){
-    devno = MKDEV(zgpio_major, zgpio_minor);
+
+  dev_info(dev, "Registering cdev.");
+
+  if(lp->zgpio_major){
+    devno = MKDEV(lp->zgpio_major, lp->zgpio_minor);
     rc = register_chrdev_region(devno, zgpio_nr_devs, DRIVER_NAME);
   }else{
-    rc = alloc_chrdev_region(&devno, zgpio_minor, zgpio_nr_devs, DRIVER_NAME);
-    zgpio_major = MAJOR(devno);
+    rc = alloc_chrdev_region(&devno, lp->zgpio_minor, zgpio_nr_devs, DRIVER_NAME);
+    lp->zgpio_major = MAJOR(devno);
   }
   
-  dev_info(dev, "zgpio allocate cdev %d %d", zgpio_major, zgpio_minor);
+  dev_info(dev, "zgpio allocate cdev %d %d", lp->zgpio_major, lp->zgpio_minor);
   
   if(rc < 0){
-    printk(KERN_WARNING "%s: can't get major %d\n", DRIVER_NAME, zgpio_major);
+    printk(KERN_WARNING "%s: can't get major %d\n", DRIVER_NAME, lp->zgpio_major);
     return rc;
   }
   
@@ -257,12 +254,14 @@ static int zgpio_cdev_init(struct device * dev, struct zgpio_local * lp){
   return 0;
 
  error:
-  unregister_chrdev_region(MKDEV(zgpio_major, zgpio_minor), zgpio_nr_devs);
+  unregister_chrdev_region(MKDEV(lp->zgpio_major, lp->zgpio_minor), zgpio_nr_devs);
   return -1;
 }
 
 static void zgpio_cdev_free(struct zgpio_local * lp){
-  dev_t devno = MKDEV(zgpio_major, zgpio_minor);
+  dev_t devno = MKDEV(lp->zgpio_major, lp->zgpio_minor);
+  if(!lp->zgpio_major)
+    return;
   cdev_del(&lp->cdev);
   unregister_chrdev_region(devno, zgpio_nr_devs);
   if(lp->irq)
@@ -297,7 +296,6 @@ static int __devinit zgpio_probe(struct platform_device *pdev)
     dev_err(dev, "invalid address\n");
     return -ENODEV;
   }  
-
   /* Get IRQ for the device */
   r_irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
   if (!r_irq) {
@@ -459,6 +457,15 @@ static int __devexit zgpio_remove(struct platform_device *pdev)
   struct device *dev = &pdev->dev;
   struct zgpio_local *lp = dev_get_drvdata(dev);
 
+  /*
+  dev_t devno = MKDEV(lp->zgpio_major, lp->zgpio_minor);
+  cdev_del(&lp->cdev);
+  unregister_chrdev_region(devno, zgpio_nr_devs);
+
+  free_irq(lp->irq, lp);
+  release_mem_region(lp->mem_start, lp->mem_end - lp->mem_start + 1);
+  */
+
   zgpio_cdev_free(lp);
   kfree(lp);
   dev_set_drvdata(dev, NULL);
@@ -489,7 +496,7 @@ static struct platform_driver zgpio_driver = {
 
 static int __init zgpio_init(void)
 {
-  printk(KERN_INFO "start zgpio. ver.0.02");
+  printk(KERN_INFO "start zgpio. ver.0.03");
  
   return platform_driver_register(&zgpio_driver);
 }
