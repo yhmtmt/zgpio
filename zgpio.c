@@ -21,7 +21,6 @@
 #include <linux/pagemap.h>
 
 #include <asm/uaccess.h>
-#include <linux/amba/xilinx_dma.h>
 
 #include "zgpio.h"
 
