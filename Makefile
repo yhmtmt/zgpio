@@ -5,7 +5,6 @@ MODULES = zgpio.o
 
 obj-m := $(MODULES)
 
-CROSS_COMPILE = arm-xilinx-linux-gnueabi-
 ARCH = arm
 MAKEARCH = $(MAKE) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE)
 
