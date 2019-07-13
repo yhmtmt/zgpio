@@ -33,8 +33,8 @@ int main(int argc, char ** argv){
   int pmask;
   unsigned long val, val_prev;
  
-  if(argc != 4){
-    printf("zgpio_get8 <device path> <pin number> <val>\n");
+  if(argc != 3){
+    printf("zgpio_get8 <device path> <pin number>\n");
     return 0;
   }
 
@@ -54,12 +54,6 @@ int main(int argc, char ** argv){
   ipin = ipin % 4;
   pmask = 0x000000FF << (ipin * 8);
   
-  val = atoi(argv[3]);
-  if(val < 0 || val >= 255){
-    printf("<val> should be 0..255\n");
-    return 0;
-  }
-  
   fd = open(argv[1], O_RDWR);
   if(fd == -1) {
     printf("Failed to open %s", argv[1]);
@@ -69,7 +63,7 @@ int main(int argc, char ** argv){
   ioctl(fd, flag_get, &val_prev);
   val = (val_prev & pmask) >> (ipin * 8);
 
-  printf("%d\n", val);
+  printf("%d\n", (int)val);
   
   close(fd);
 
