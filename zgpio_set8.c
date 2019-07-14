@@ -55,7 +55,7 @@ int main(int argc, char ** argv){
   pmask = 0x000000FF << (ipin * 8);
   
   val = atoi(argv[3]);
-  if(val < 0 || val >= 255){
+  if(val < 0 || val > 255){
     printf("<val> should be 0..255\n");
     return 0;
   }
